@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
 import type { Member } from '../types';
+import ConfirmationModal from './ConfirmationModal';
 
 interface MemberManagerProps {
   members: Member[];
@@ -10,6 +10,8 @@ interface MemberManagerProps {
 
 const MemberManager: React.FC<MemberManagerProps> = ({ members, onAddMember, onDeleteMember }) => {
   const [newMemberName, setNewMemberName] = useState('');
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,11 +19,24 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, onAddMember, onD
     setNewMemberName('');
   };
 
-  const handleDeleteConfirm = (memberId: string, memberName: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa thành viên "${memberName}" không?`)) {
-      onDeleteMember(memberId);
+  const handleDeleteRequest = (memberId: string, memberName: string) => {
+    setMemberToDelete({ id: memberId, name: memberName });
+    setIsConfirmModalOpen(true);
+  };
+  
+  const handleConfirmDelete = () => {
+    if (memberToDelete) {
+      onDeleteMember(memberToDelete.id);
+      setIsConfirmModalOpen(false);
+      setMemberToDelete(null);
     }
   };
+  
+  const handleCancelDelete = () => {
+    setIsConfirmModalOpen(false);
+    setMemberToDelete(null);
+  };
+
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
@@ -51,7 +66,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, onAddMember, onD
               <li key={member.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
                 <span className="text-gray-800 dark:text-gray-200">{member.name}</span>
                 <button 
-                  onClick={() => handleDeleteConfirm(member.id, member.name)}
+                  onClick={() => handleDeleteRequest(member.id, member.name)}
                   className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400"
                   aria-label={`Xóa ${member.name}`}
                 >
@@ -66,6 +81,20 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, onAddMember, onD
           </p>
         )}
       </div>
+
+      {memberToDelete && (
+        <ConfirmationModal
+            isOpen={isConfirmModalOpen}
+            onClose={handleCancelDelete}
+            onConfirm={handleConfirmDelete}
+            title="Xác nhận xóa thành viên"
+            message={
+                <>
+                    Bạn có chắc chắn muốn xóa thành viên <strong className="font-semibold text-gray-800 dark:text-gray-100">{memberToDelete.name}</strong> không?
+                </>
+            }
+        />
+      )}
     </div>
   );
 };
