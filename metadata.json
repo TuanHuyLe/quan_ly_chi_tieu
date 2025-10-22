@@ -1,0 +1,5 @@
+{
+  "name": "Group Expense Tracker",
+  "description": "An application to track group expenses for activities like dining out, calculating who paid, who owes whom, and tracking payment statuses.",
+  "requestFramePermissions": []
+}
