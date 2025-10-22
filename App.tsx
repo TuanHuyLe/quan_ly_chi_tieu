@@ -5,31 +5,18 @@ import Header from './components/Header';
 import ExpenseForm from './components/ExpenseForm';
 import ExpenseList from './components/ExpenseList';
 import BalanceSummary from './components/BalanceSummary';
+import MemberManager from './components/MemberManager'; // Import new component
 import { calculateBalances, simplifyDebts } from './services/expenseCalculator';
-
-const initialMembers: Member[] = [
-  { id: '1', name: 'An' },
-  { id: '2', name: 'Bình' },
-  { id: '3', name: 'Chi' },
-  { id: '4', name: 'Dũng' },
-];
-
-const initialExpenses: Expense[] = [
-    { id: 'e1', description: 'Bữa trưa ngày 1', amount: 800000, paidById: '1', splitForIds: ['1', '2', '3', '4'], date: new Date('2023-10-26T12:00:00Z').toISOString() },
-    { id: 'e2', description: 'Cà phê', amount: 150000, paidById: '2', splitForIds: ['1', '2'], date: new Date('2023-10-26T14:00:00Z').toISOString() },
-    { id: 'e3', description: 'Bữa tối BBQ', amount: 1200000, paidById: '3', splitForIds: ['1', '2', '3', '4'], date: new Date('2023-10-26T19:00:00Z').toISOString() },
-];
-
 
 const App: React.FC = () => {
   const [members, setMembers] = useState<Member[]>(() => {
     const savedMembers = localStorage.getItem('group_expense_members');
-    return savedMembers ? JSON.parse(savedMembers) : initialMembers;
+    return savedMembers ? JSON.parse(savedMembers) : [];
   });
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     const savedExpenses = localStorage.getItem('group_expense_expenses');
-    return savedExpenses ? JSON.parse(savedExpenses) : initialExpenses;
+    return savedExpenses ? JSON.parse(savedExpenses) : [];
   });
 
   const [isFormVisible, setIsFormVisible] = useState(false);
@@ -41,6 +28,36 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('group_expense_expenses', JSON.stringify(expenses));
   }, [expenses]);
+
+  const handleAddMember = (name: string) => {
+    if (name.trim() === '') {
+        alert('Tên thành viên không được để trống.');
+        return;
+    }
+    if (members.some(member => member.name.toLowerCase() === name.trim().toLowerCase())) {
+        alert('Tên thành viên đã tồn tại.');
+        return;
+    }
+    const newMember: Member = {
+      id: `mem-${new Date().getTime()}`,
+      name: name.trim(),
+    };
+    setMembers(prev => [...prev, newMember]);
+  };
+
+  const handleDeleteMember = (memberId: string) => {
+    const isMemberInvolved = expenses.some(expense => 
+        expense.paidById === memberId || expense.splitForIds.includes(memberId)
+    );
+
+    if (isMemberInvolved) {
+        alert('Không thể xóa thành viên đã tham gia vào một khoản chi tiêu. Vui lòng xóa các chi tiêu liên quan trước.');
+        return;
+    }
+
+    setMembers(prev => prev.filter(member => member.id !== memberId));
+  };
+
 
   const handleAddExpense = (newExpenseData: Omit<Expense, 'id' | 'date'>) => {
     const newExpense: Expense = {
@@ -56,6 +73,7 @@ const App: React.FC = () => {
   }
 
   const simplifiedDebts: SimplifiedDebt[] = useMemo(() => {
+    if (members.length === 0 || expenses.length === 0) return [];
     const balances = calculateBalances(members, expenses);
     return simplifyDebts(balances, members);
   }, [members, expenses]);
@@ -70,7 +88,8 @@ const App: React.FC = () => {
                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Danh Sách Chi Tiêu</h2>
                 <button
                 onClick={() => setIsFormVisible(true)}
-                className="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                disabled={members.length === 0}
+                className="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                 <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -80,7 +99,8 @@ const App: React.FC = () => {
             </div>
             <ExpenseList expenses={expenses} members={members} onDelete={handleDeleteExpense} />
           </div>
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-8">
+             <MemberManager members={members} onAddMember={handleAddMember} onDeleteMember={handleDeleteMember} />
              <BalanceSummary debts={simplifiedDebts} />
           </div>
         </div>
