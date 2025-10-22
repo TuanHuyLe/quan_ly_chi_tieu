@@ -11,6 +11,7 @@ export interface Expense {
   paidById: string; // Member ID
   splitForIds: string[]; // Array of Member IDs
   date: string; // ISO string
+  settledByIds?: string[]; // Array of Member IDs who have paid their share
 }
 
 export interface SimplifiedDebt {

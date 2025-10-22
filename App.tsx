@@ -64,6 +64,7 @@ const App: React.FC = () => {
       ...newExpenseData,
       id: `exp-${new Date().getTime()}`,
       date: new Date().toISOString(),
+      settledByIds: newExpenseData.splitForIds.includes(newExpenseData.paidById) ? [newExpenseData.paidById] : [],
     };
     setExpenses(prev => [...prev, newExpense]);
   };
@@ -71,6 +72,24 @@ const App: React.FC = () => {
   const handleDeleteExpense = (expenseId: string) => {
     setExpenses(prev => prev.filter(expense => expense.id !== expenseId));
   }
+
+  const handleToggleSettlement = (expenseId: string, memberId: string) => {
+    setExpenses(prevExpenses => 
+      prevExpenses.map(expense => {
+        if (expense.id === expenseId) {
+          const settled = expense.settledByIds || [];
+          // The payer cannot be unsettled
+          if (memberId === expense.paidById) return expense;
+          
+          const newSettledByIds = settled.includes(memberId)
+            ? settled.filter(id => id !== memberId)
+            : [...settled, memberId];
+          return { ...expense, settledByIds: newSettledByIds };
+        }
+        return expense;
+      })
+    );
+  };
 
   const simplifiedDebts: SimplifiedDebt[] = useMemo(() => {
     if (members.length === 0 || expenses.length === 0) return [];
@@ -97,7 +116,12 @@ const App: React.FC = () => {
                 Thêm Chi Tiêu
                 </button>
             </div>
-            <ExpenseList expenses={expenses} members={members} onDelete={handleDeleteExpense} />
+            <ExpenseList 
+              expenses={expenses} 
+              members={members} 
+              onDelete={handleDeleteExpense} 
+              onToggleSettlement={handleToggleSettlement}
+            />
           </div>
           <div className="lg:col-span-1 space-y-8">
              <MemberManager members={members} onAddMember={handleAddMember} onDeleteMember={handleDeleteMember} />

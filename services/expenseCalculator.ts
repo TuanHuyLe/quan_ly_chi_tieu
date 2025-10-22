@@ -8,17 +8,31 @@ export const calculateBalances = (members: Member[], expenses: Expense[]): Map<s
   expenses.forEach(expense => {
     const payerId = expense.paidById;
     const amount = expense.amount;
-    const splitCount = expense.splitForIds.length;
+    const splitForIds = expense.splitForIds;
+    const splitCount = splitForIds.length;
 
     if (splitCount === 0) return;
+    const share = amount / splitCount;
 
-    // Credit the payer
+    // Ghi có cho người trả tiền
     balances.set(payerId, (balances.get(payerId) || 0) + amount);
 
-    // Debit the members who the expense was for
-    const share = amount / splitCount;
-    expense.splitForIds.forEach(memberId => {
+    // Ghi nợ những người được chia tiền
+    splitForIds.forEach(memberId => {
       balances.set(memberId, (balances.get(memberId) || 0) - share);
+    });
+
+    // Xử lý các khoản đã được thanh toán lại cho người trả tiền ban đầu
+    const settledIds = expense.settledByIds || [];
+    settledIds.forEach(settledMemberId => {
+        // Người trả tiền ban đầu không cần thực hiện giao dịch với chính mình
+        if (settledMemberId !== payerId) {
+            // Việc một người thanh toán lại giống như một giao dịch:
+            // 1. Ghi nợ người trả tiền ban đầu (vì họ đã nhận lại tiền, số dư nợ của người khác với họ giảm)
+            balances.set(payerId, (balances.get(payerId) || 0) - share);
+            // 2. Ghi có cho người vừa thanh toán (vì họ đã trả nợ, số dư nợ của họ giảm)
+            balances.set(settledMemberId, (balances.get(settledMemberId) || 0) + share);
+        }
     });
   });
 
